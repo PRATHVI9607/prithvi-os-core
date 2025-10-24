@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, Minus, Square, Maximize2 } from "lucide-react";
 import { WindowState, useWindows } from "@/contexts/WindowContext";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface WindowProps {
   window: WindowState;
@@ -13,9 +14,10 @@ export const Window = ({ window, children }: WindowProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const windowRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest(".window-controls")) return;
+    if (isMobile || (e.target as HTMLElement).closest(".window-controls")) return;
     focusWindow(window.id);
     setIsDragging(true);
     setDragOffset({
@@ -26,7 +28,7 @@ export const Window = ({ window, children }: WindowProps) => {
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || window.isMaximized) return;
+      if (!isDragging || window.isMaximized || isMobile) return;
       
       const newX = e.clientX - dragOffset.x;
       const newY = Math.max(0, e.clientY - dragOffset.y);
@@ -41,7 +43,7 @@ export const Window = ({ window, children }: WindowProps) => {
       setIsDragging(false);
     };
 
-    if (isDragging) {
+    if (isDragging && !isMobile) {
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     }
@@ -50,11 +52,17 @@ export const Window = ({ window, children }: WindowProps) => {
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, dragOffset, window.isMaximized]);
+  }, [isDragging, dragOffset, window.isMaximized, isMobile]);
+
+  useEffect(() => {
+    if (isMobile) {
+      maximizeWindow(window.id);
+    }
+  }, [isMobile, window.id, maximizeWindow]);
 
   if (window.isMinimized) return null;
 
-  const style = window.isMaximized
+  const style = window.isMaximized || isMobile
     ? {
         left: 0,
         top: 0,
@@ -75,11 +83,11 @@ export const Window = ({ window, children }: WindowProps) => {
       ref={windowRef}
       className="fixed glass-strong rounded-lg shadow-2xl flex flex-col overflow-hidden animate-scale-in"
       style={style}
-      onMouseDown={() => focusWindow(window.id)}
+      onMouseDown={() => !isMobile && focusWindow(window.id)}
     >
       {/* Title bar */}
       <div
-        className="h-10 bg-primary/10 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 cursor-move select-none"
+        className={`h-10 bg-primary/10 backdrop-blur-sm border-b border-border flex items-center justify-between px-4 select-none ${!isMobile ? 'cursor-move' : ''}`}
         onMouseDown={handleMouseDown}
       >
         <span className="font-semibold text-sm">{window.title}</span>
@@ -89,6 +97,7 @@ export const Window = ({ window, children }: WindowProps) => {
             size="icon"
             className="h-6 w-6 hover:bg-muted"
             onClick={() => minimizeWindow(window.id)}
+            disabled={isMobile}
           >
             <Minus className="h-3 w-3" />
           </Button>
@@ -97,6 +106,7 @@ export const Window = ({ window, children }: WindowProps) => {
             size="icon"
             className="h-6 w-6 hover:bg-muted"
             onClick={() => maximizeWindow(window.id)}
+            disabled={isMobile}
           >
             {window.isMaximized ? (
               <Square className="h-3 w-3" />

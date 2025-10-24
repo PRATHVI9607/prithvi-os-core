@@ -135,7 +135,7 @@ export const Desktop = () => {
       )}
 
       {/* Desktop icons */}
-      <div className="relative z-10 p-8 grid grid-cols-6 gap-6">
+      <div className="relative z-10 p-8 grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-6">
         {desktopIcons.map((icon) => (
           <div
             key={icon.id}
