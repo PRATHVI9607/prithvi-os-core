@@ -18,15 +18,19 @@ export const SnakeGame = () => {
 
   const handleResize = useCallback(() => {
     if (gameContainerRef.current) {
-      const width = gameContainerRef.current.offsetWidth;
-      setCellSize(width / GRID_SIZE);
+      const { offsetWidth, offsetHeight } = gameContainerRef.current;
+      const newCellSize = Math.min(offsetWidth / GRID_SIZE, offsetHeight / GRID_SIZE, 20);
+      setCellSize(newCellSize > 5 ? newCellSize : 5);
     }
   }, []);
 
   useEffect(() => {
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    if (gameContainerRef.current) {
+      resizeObserver.observe(gameContainerRef.current);
+    }
     handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => resizeObserver.disconnect();
   }, [handleResize]);
 
   const generateFood = useCallback(() => {
@@ -119,18 +123,17 @@ export const SnakeGame = () => {
   }, [direction, food, isPlaying, gameOver, generateFood]);
 
   return (
-    <Card className="p-2 sm:p-6" ref={gameContainerRef}>
-      <div className="flex flex-col items-center gap-2 sm:gap-4">
-        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-8">
-          <div className="text-lg sm:text-xl font-bold">Score: {score}</div>
-          {!isPlaying && !gameOver && (
-            <Button onClick={resetGame} size="sm">Start Game</Button>
-          )}
-          {gameOver && (
-            <Button onClick={resetGame} size="sm">Play Again</Button>
-          )}
-        </div>
-
+    <Card className="w-full h-full p-2 sm:p-4 flex flex-col" ref={gameContainerRef}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-lg sm:text-xl font-bold">Score: {score}</div>
+        {!isPlaying && !gameOver && (
+          <Button onClick={resetGame} size="sm">Start Game</Button>
+        )}
+        {gameOver && (
+          <Button onClick={resetGame} size="sm">Play Again</Button>
+        )}
+      </div>
+      <div className="flex-1 flex items-center justify-center">
         <div
           className="border-2 border-border bg-card relative"
           style={{
@@ -164,14 +167,12 @@ export const SnakeGame = () => {
             }}
           />
         </div>
-
-        {gameOver && (
-          <div className="text-lg sm:text-xl font-bold text-destructive">Game Over!</div>
-        )}
-
-        <div className="text-xs sm:text-sm text-muted-foreground text-center">
-          Use arrow keys to control the snake
-        </div>
+      </div>
+      {gameOver && (
+        <div className="text-lg sm:text-xl font-bold text-destructive text-center mt-2">Game Over!</div>
+      )}
+      <div className="text-xs sm:text-sm text-muted-foreground text-center mt-2">
+        Use arrow keys to control the snake
       </div>
     </Card>
   );
