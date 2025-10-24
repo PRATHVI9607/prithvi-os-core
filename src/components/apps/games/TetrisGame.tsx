@@ -1,10 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const ROWS = 20;
 const COLS = 10;
-const CELL_SIZE = 25;
 
 const SHAPES = [
   [[1, 1, 1, 1]], // I
@@ -34,6 +33,23 @@ export const TetrisGame = () => {
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [cellSize, setCellSize] = useState(25);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleResize = useCallback(() => {
+    if (gameContainerRef.current) {
+      const width = gameContainerRef.current.offsetWidth;
+      const height = gameContainerRef.current.offsetHeight;
+      const newCellSize = Math.min(width / COLS, height / ROWS);
+      setCellSize(newCellSize > 0 ? newCellSize : 25);
+    }
+  }, []);
+
+  useEffect(() => {
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [handleResize]);
 
   const createPiece = useCallback(() => {
     const shapeIndex = Math.floor(Math.random() * SHAPES.length);
@@ -92,18 +108,19 @@ export const TetrisGame = () => {
     };
   }, []);
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setBoard(Array.from({ length: ROWS }, () => Array(COLS).fill(0)));
     setCurrentPiece(createPiece());
     setScore(0);
     setGameOver(false);
     setIsPlaying(true);
-  };
+  }, [createPiece]);
 
   useEffect(() => {
     if (!isPlaying || gameOver || !currentPiece) return;
 
     const handleKeyPress = (e: KeyboardEvent) => {
+      e.preventDefault();
       if (e.key === "ArrowLeft" && !checkCollision(currentPiece, board, -1, 0)) {
         setCurrentPiece({ ...currentPiece, x: currentPiece.x - 1 });
       } else if (e.key === "ArrowRight" && !checkCollision(currentPiece, board, 1, 0)) {
@@ -166,26 +183,26 @@ export const TetrisGame = () => {
   };
 
   return (
-    <Card className="p-6">
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-8">
-          <div className="text-xl font-bold">Score: {score}</div>
+    <Card className="p-2 sm:p-6" ref={gameContainerRef}>
+      <div className="flex flex-col items-center gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-8">
+          <div className="text-lg sm:text-xl font-bold">Score: {score}</div>
           {!isPlaying && !gameOver && (
-            <Button onClick={resetGame}>Start Game</Button>
+            <Button onClick={resetGame} size="sm">Start Game</Button>
           )}
           {gameOver && (
-            <Button onClick={resetGame}>Play Again</Button>
+            <Button onClick={resetGame} size="sm">Play Again</Button>
           )}
         </div>
 
         <div
           className="border-2 border-border bg-card"
           style={{
-            width: COLS * CELL_SIZE,
-            height: ROWS * CELL_SIZE,
+            width: COLS * cellSize,
+            height: ROWS * cellSize,
             display: "grid",
-            gridTemplateRows: `repeat(${ROWS}, ${CELL_SIZE}px)`,
-            gridTemplateColumns: `repeat(${COLS}, ${CELL_SIZE}px)`,
+            gridTemplateRows: `repeat(${ROWS}, ${cellSize}px)`,
+            gridTemplateColumns: `repeat(${COLS}, ${cellSize}px)`,
           }}
         >
           {renderBoard().map((row, y) =>
@@ -193,8 +210,8 @@ export const TetrisGame = () => {
               <div
                 key={`${y}-${x}`}
                 style={{
-                  width: CELL_SIZE,
-                  height: CELL_SIZE,
+                  width: cellSize,
+                  height: cellSize,
                   backgroundColor: cell || "hsl(var(--muted))",
                   border: "1px solid hsl(var(--border))",
                 }}
@@ -204,10 +221,10 @@ export const TetrisGame = () => {
         </div>
 
         {gameOver && (
-          <div className="text-xl font-bold text-destructive">Game Over!</div>
+          <div className="text-lg sm:text-xl font-bold text-destructive">Game Over!</div>
         )}
 
-        <div className="text-sm text-muted-foreground text-center">
+        <div className="text-xs sm:text-sm text-muted-foreground text-center">
           Use arrow keys: ← → to move, ↓ to drop, ↑ to rotate
         </div>
       </div>

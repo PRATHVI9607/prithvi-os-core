@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
 const GRID_SIZE = 20;
-const CELL_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
 const INITIAL_DIRECTION = { x: 1, y: 0 };
 
@@ -14,6 +13,21 @@ export const SnakeGame = () => {
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [cellSize, setCellSize] = useState(20);
+  const gameContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleResize = useCallback(() => {
+    if (gameContainerRef.current) {
+      const width = gameContainerRef.current.offsetWidth;
+      setCellSize(width / GRID_SIZE);
+    }
+  }, []);
+
+  useEffect(() => {
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [handleResize]);
 
   const generateFood = useCallback(() => {
     const newFood = {
@@ -23,19 +37,20 @@ export const SnakeGame = () => {
     return newFood;
   }, []);
 
-  const resetGame = () => {
+  const resetGame = useCallback(() => {
     setSnake(INITIAL_SNAKE);
     setDirection(INITIAL_DIRECTION);
     setFood(generateFood());
     setGameOver(false);
     setScore(0);
     setIsPlaying(true);
-  };
+  }, [generateFood]);
 
   useEffect(() => {
     if (!isPlaying || gameOver) return;
 
     const handleKeyPress = (e: KeyboardEvent) => {
+      e.preventDefault();
       switch (e.key) {
         case "ArrowUp":
           if (direction.y === 0) setDirection({ x: 0, y: -1 });
@@ -104,24 +119,23 @@ export const SnakeGame = () => {
   }, [direction, food, isPlaying, gameOver, generateFood]);
 
   return (
-    <Card className="p-6">
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-8">
-          <div className="text-xl font-bold">Score: {score}</div>
+    <Card className="p-2 sm:p-6" ref={gameContainerRef}>
+      <div className="flex flex-col items-center gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-8">
+          <div className="text-lg sm:text-xl font-bold">Score: {score}</div>
           {!isPlaying && !gameOver && (
-            <Button onClick={resetGame}>Start Game</Button>
+            <Button onClick={resetGame} size="sm">Start Game</Button>
           )}
           {gameOver && (
-            <Button onClick={resetGame}>Play Again</Button>
+            <Button onClick={resetGame} size="sm">Play Again</Button>
           )}
         </div>
 
         <div
-          className="border-2 border-border bg-card"
+          className="border-2 border-border bg-card relative"
           style={{
-            width: GRID_SIZE * CELL_SIZE,
-            height: GRID_SIZE * CELL_SIZE,
-            position: "relative",
+            width: GRID_SIZE * cellSize,
+            height: GRID_SIZE * cellSize,
           }}
         >
           {snake.map((segment, i) => (
@@ -129,10 +143,10 @@ export const SnakeGame = () => {
               key={i}
               style={{
                 position: "absolute",
-                left: segment.x * CELL_SIZE,
-                top: segment.y * CELL_SIZE,
-                width: CELL_SIZE,
-                height: CELL_SIZE,
+                left: segment.x * cellSize,
+                top: segment.y * cellSize,
+                width: cellSize,
+                height: cellSize,
                 backgroundColor: i === 0 ? "hsl(var(--primary))" : "hsl(var(--accent))",
                 borderRadius: "2px",
               }}
@@ -141,10 +155,10 @@ export const SnakeGame = () => {
           <div
             style={{
               position: "absolute",
-              left: food.x * CELL_SIZE,
-              top: food.y * CELL_SIZE,
-              width: CELL_SIZE,
-              height: CELL_SIZE,
+              left: food.x * cellSize,
+              top: food.y * cellSize,
+              width: cellSize,
+              height: cellSize,
               backgroundColor: "hsl(var(--destructive))",
               borderRadius: "50%",
             }}
@@ -152,10 +166,10 @@ export const SnakeGame = () => {
         </div>
 
         {gameOver && (
-          <div className="text-xl font-bold text-destructive">Game Over!</div>
+          <div className="text-lg sm:text-xl font-bold text-destructive">Game Over!</div>
         )}
 
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs sm:text-sm text-muted-foreground text-center">
           Use arrow keys to control the snake
         </div>
       </div>
